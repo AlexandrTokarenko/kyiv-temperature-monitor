@@ -1,0 +1,47 @@
+name: Kyiv temperature commit
+
+# Запускать по расписанию каждые 30 минут и разрешить ручной запуск
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # каждые 30 минут
+  workflow_dispatch:          # позволяет запустить вручную из вкладки Actions
+
+# Нужно право на запись в репозиторий (commit + push)
+permissions:
+  contents: write
+
+jobs:
+  commit-temperature:
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Checkout репозитория (с токеном, чтобы можно было пушить)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Используем секрет MY_PAT, который нужно добавить в репозиторий (см. ниже)
+          token: ${{ secrets.MY_PAT }}
+          persist-credentials: true   # сохраняет учетные данные для последующих шагов
+
+      # 2️⃣ Получаем температуру через wttr.in
+      - name: Get Kyiv temperature
+        id: temp
+        run: |
+          TEMP=$(curl -s "wttr.in/Kyiv?format=%t")
+          echo "temp=$TEMP" >> $GITHUB_OUTPUT
+
+      # 3️⃣ Если температура получена – добавляем строку в лог
+      - name: Append temperature to log
+        if: steps.temp.outputs.temp != ''
+        run: |
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          echo "$TIMESTAMP,${{ steps.temp.outputs.temp }}" >> temperature_log.csv
+
+      # 4️⃣ Коммитим и пушим (только если лог изменился)
+      - name: Commit and push
+        if: steps.temp.outputs.temp != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add temperature_log.csv
+          git commit -m "Temperature log update: $TIMESTAMP (${{ steps.temp.outputs.temp }})" || echo "No changes to commit"
+          git push
