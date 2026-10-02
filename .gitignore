@@ -1,0 +1,6 @@
+# Log files
+temperature_log.csv
+
+# OS
+.DS_Store
+Thumbs.db
