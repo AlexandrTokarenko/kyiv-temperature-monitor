@@ -4,9 +4,10 @@ name: Kyiv temperature commit
 # Если нужно локальное время, поправьте cron под ваш offset.
 on:
   schedule:
-    - cron: '5,35 * * * *'   # каждые 30 минут, со сдвигом на +5 минут
-  workflow_dispatch:
+    - cron: '5,35 * * * *'   # каждые 30 минут, со сдвигом от пиковых :00/:30
+  workflow_dispatch:          # позволяет запустить вручную
 
+# Нужно право на запись в репозиторий (commit + push)
 permissions:
   contents: write
 
@@ -14,11 +15,9 @@ jobs:
   commit-temperature:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout репозитория (с токеном для push)
+      # 1️⃣ Checkout репозитория (используем встроенный GITHUB_TOKEN)
       - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.MY_PAT }}
+        uses: actions/checkout@v4
 
       # 2️⃣ Получаем температуру с несколькими попытками
       - name: Get Kyiv temperature (retries)
@@ -36,10 +35,11 @@ jobs:
 
       # 3️⃣ Если температура получена – добавляем строку в лог
       - name: Append temperature to log
-        if: steps.temp.outputs.temp != ''
-        run: |
-          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-          echo "$TIMESTAMP,${{ steps.temp.outputs.temp }}" >> temperature_log.csv
+      - run: |
+          if [ "${{ steps.temp.outputs.temp }}" != "" ]; then
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+            echo "$TIMESTAMP,${{ steps.temp.outputs.temp }}" >> temperature_log.csv
+          fi
 
       # 4️⃣ Коммитим и пушим (только если лог изменился)
       - name: Commit and push
