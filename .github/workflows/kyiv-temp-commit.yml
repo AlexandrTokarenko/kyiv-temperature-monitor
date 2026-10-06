@@ -35,11 +35,10 @@ jobs:
 
       # 3️⃣ Если температура получена – добавляем строку в лог
       - name: Append temperature to log
-      - run: |
-          if [ "${{ steps.temp.outputs.temp }}" != "" ]; then
-            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-            echo "$TIMESTAMP,${{ steps.temp.outputs.temp }}" >> temperature_log.csv
-          fi
+        if: steps.temp.outputs.temp != ''
+        run: |
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          echo "$TIMESTAMP,${{ steps.temp.outputs.temp }}" >> temperature_log.csv
 
       # 4️⃣ Коммитим и пушим (только если лог изменился)
       - name: Commit and push
